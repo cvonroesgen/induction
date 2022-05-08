@@ -5,11 +5,14 @@ let renderer;
 let scene;
 let electrons;
 let electrons2;
+let electrons3;
 let arrow;
 let pivot;
+let pivotCoil;
 var numMagFluxLoops = 12;
 var lengthMagFluxLoops = 6;
 var spiralWraps = 100;
+let fluxLoops = new THREE.Group();;
     
 function init() {
 
@@ -70,27 +73,7 @@ function createLights() {
 }
 
 function createMeshes() {
-    class CustomEllipse extends THREE.Curve {
-
-        constructor( scale = 1 ) {
     
-            super();
-    
-            this.scale = scale;
-    
-        }
-    
-        getPoint( t, optionalTarget = new THREE.Vector3() ) {
-    
-            const tx = Math.cos( 2 * Math.PI * t ) * lengthMagFluxLoops;
-            const ty = Math.sin( 2 * Math.PI * t );
-            const tz = 0;
-    
-            return optionalTarget.set( tx, ty, tz ).multiplyScalar( this.scale );
-    
-        }
-    
-    }
 
     class CustomSpiral extends THREE.Curve {
 
@@ -112,20 +95,22 @@ function createMeshes() {
     
     }
 
-
+    const ellipseTemplate = makeEllipse();
+    const ellipseArrow = makeArrow(10, 1, 0xFF0000);
+    ellipseArrow.rotation.z = Math.PI/2;
+    ellipseArrow.position.y = 5;
+    ellipseTemplate.add(ellipseArrow);
     for(var i = 0; i < numMagFluxLoops; i++)
     {
-    const path = new CustomEllipse( 5 );
-    const geometry = new THREE.TubeGeometry( path, 100, .5, 8, true );
-    const material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
-    const mesh = new THREE.Mesh( geometry, material );
+    const ellipse = ellipseTemplate.clone();
     var angle = 2 * Math.PI * i/numMagFluxLoops;
-    mesh.rotation.y = (angle);
+    ellipse.rotation.y = (angle);
     angle +=  2 * Math.PI/4;
-    mesh.position.x = Math.sin(angle) * lengthMagFluxLoops * 5;
-    mesh.position.z = Math.cos(angle) * lengthMagFluxLoops * 5;
-    scene.add( mesh );
+    ellipse.position.x = Math.sin(angle) * lengthMagFluxLoops * 5;
+    ellipse.position.z = Math.cos(angle) * lengthMagFluxLoops * 5;
+    fluxLoops.add(ellipse);    
     }
+    scene.add( fluxLoops );
 
     {
     const geometry = new THREE.CylinderGeometry( lengthMagFluxLoops * 7.5, lengthMagFluxLoops * 7.5, .05, 32 );
@@ -152,16 +137,52 @@ function createMeshes() {
     const length = 4;
     const hex = 0xffff00;
     pivot = new THREE.Object3D();
+    pivotCoil = new THREE.Object3D();
     electrons = makeArrow(10, 1, 0xFFFFFF);
     electrons.rotation.z = Math.PI/2;
     electrons.rotation.y = -Math.PI/2;
     electrons2 = electrons.clone();
+    electrons3 = electrons.clone();
+    electrons3.rotation.z = Math.PI;
     electrons.position.set( lengthMagFluxLoops * 3, 2, 0 );
     electrons2.position.set( lengthMagFluxLoops * 6, 2, 0 );
+    electrons3.position.set( lengthMagFluxLoops * 9, 2, 0 );
     pivot.add(electrons)
     pivot.add(electrons2);
+    pivotCoil.add(electrons3);
     scene.add(pivot);
+    scene.add(pivotCoil);
     }
+
+}
+
+function makeEllipse()
+{
+    class CustomEllipse extends THREE.Curve {
+
+        constructor( scale = 1 ) {
+    
+            super();
+    
+            this.scale = scale;
+    
+        }
+    
+        getPoint( t, optionalTarget = new THREE.Vector3() ) {
+    
+            const tx = Math.cos( 2 * Math.PI * t ) * lengthMagFluxLoops;
+            const ty = Math.sin( 2 * Math.PI * t );
+            const tz = 0;
+    
+            return optionalTarget.set( tx, ty, tz ).multiplyScalar( this.scale );
+    
+        }
+    
+    }
+    const path = new CustomEllipse( 5 );
+    const geometry = new THREE.TubeGeometry( path, 100, .5, 8, true );
+    const material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
+    return new THREE.Mesh( geometry, material );
 
 }
 
@@ -200,20 +221,18 @@ let timeSteps = 500;
 let clockWise = 1;
 // perform any updates to the scene, called once per frame
 // avoid heavy computation here
-const myAxis = new THREE.Vector3(0, 1, 0);
+
 function update()
 {
 time++;
-time = time % timeSteps;
-var angle = -clockWise * 2 * Math.PI * time/timeSteps;
-const tx = Math.sin(angle) * lengthMagFluxLoops * 3;
-const ty = 2;
-const tz = Math.cos(angle) * lengthMagFluxLoops * 3;
-pivot.rotation.y = (angle  + (Math.PI * (1 + (clockWise * -.05))));   
-/*electrons.position.set( tx, ty, tz );
-electrons.rotation.y = (angle  + (Math.PI * (1 + (clockWise * -.05))));
-electrons2.position.set( 2 * tx, ty, 2 * tz );
-electrons2.rotation.y = (angle  + (Math.PI * (1 + (clockWise * -.05))));*/
+var angle = -clockWise * 2 * Math.PI * Math.sin(Math.PI * time/timeSteps);
+pivot.rotation.y = angle;
+pivotCoil.rotation.y = -angle;
+for(var i = 0; i < fluxLoops.children.length; i++)
+    {
+    fluxLoops.children[i].children[0].scale.set( 1, Math.sin(Math.PI * time/timeSteps), 1 );;  
+    }
+fluxLoops.children;
 }
 
 // render, or 'draw a still image', of the scene

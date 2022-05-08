@@ -3,19 +3,29 @@ let camera;
 let controls;
 let renderer;
 let scene;
-let electrons;
-let electrons2;
-let electrons3;
+let panElectrons1;
+let panElectrons2;
+let coilElectrons;
 let arrow;
-let pivot;
-let pivotCoil;
+let pivotPanElectrons;
+let pivotCoilElectrons;
 var numMagFluxLoops = 12;
 var lengthMagFluxLoops = 6;
 var spiralWraps = 100;
-let fluxLoops = new THREE.Group();;
+let fluxLoops = new THREE.Group();
+let panBottom;
+let spiral;
+let panColor = new THREE.Color();
+const panColorWarm = new THREE.Color("red");
+const panColorCold = new THREE.Color("lightgrey");
+    
     
 function init() {
-
+    document.getElementById("coil").addEventListener("click", function(){spiral.visible = !spiral.visible});
+    document.getElementById("coilcurrent").addEventListener("click", function(){pivotCoilElectrons.visible = !pivotCoilElectrons.visible});
+    document.getElementById("flux").addEventListener("click", function(){fluxLoops.visible = !fluxLoops.visible});
+    document.getElementById("panbottom").addEventListener("click", function(){panBottom.visible = !panBottom.visible});
+    document.getElementById("fluxcurrent").addEventListener("click", function(){pivotPanElectrons.visible = !pivotPanElectrons.visible});
     container = document.querySelector('#scene-container');
 
     // create a Scene
@@ -96,7 +106,7 @@ function createMeshes() {
     }
 
     const ellipseTemplate = makeEllipse();
-    const ellipseArrow = makeArrow(10, 1, 0xFF0000);
+    const ellipseArrow = makeArrow(10, 1, 0x00FF00);
     ellipseArrow.rotation.z = Math.PI/2;
     ellipseArrow.position.y = 5;
     ellipseTemplate.add(ellipseArrow);
@@ -114,17 +124,17 @@ function createMeshes() {
 
     {
     const geometry = new THREE.CylinderGeometry( lengthMagFluxLoops * 7.5, lengthMagFluxLoops * 7.5, .05, 32 );
-    const material = new THREE.MeshBasicMaterial( {color: 0x0000ff} );
-    const cylinder = new THREE.Mesh( geometry, material );
+    const material = new THREE.MeshBasicMaterial( {color: panColor} );
+    panBottom = new THREE.Mesh( geometry, material );
     
-    cylinder.position.y = 2;
-    scene.add( cylinder );
+    panBottom.position.y = 2;
+    scene.add( panBottom );
     }
     {
     const path = new CustomSpiral(spiralWraps);
     const geometry = new THREE.TubeGeometry( path, 10000, .5, 8, true );
     const material = new THREE.MeshPhongMaterial( { color: 0xffff00 } );
-    const spiral = new THREE.Mesh( geometry, material );
+    spiral = new THREE.Mesh( geometry, material );
     scene.add( spiral );
     }
     {
@@ -136,22 +146,22 @@ function createMeshes() {
     const origin = new THREE.Vector3( 0, 2, 0 );
     const length = 4;
     const hex = 0xffff00;
-    pivot = new THREE.Object3D();
-    pivotCoil = new THREE.Object3D();
-    electrons = makeArrow(10, 1, 0xFFFFFF);
-    electrons.rotation.z = Math.PI/2;
-    electrons.rotation.y = -Math.PI/2;
-    electrons2 = electrons.clone();
-    electrons3 = electrons.clone();
-    electrons3.rotation.z = Math.PI;
-    electrons.position.set( lengthMagFluxLoops * 3, 2, 0 );
-    electrons2.position.set( lengthMagFluxLoops * 6, 2, 0 );
-    electrons3.position.set( lengthMagFluxLoops * 9, 2, 0 );
-    pivot.add(electrons)
-    pivot.add(electrons2);
-    pivotCoil.add(electrons3);
-    scene.add(pivot);
-    scene.add(pivotCoil);
+    pivotPanElectrons = new THREE.Object3D();
+    pivotCoilElectrons = new THREE.Object3D();
+    panElectrons1 = makeArrow(10, 1, 0x0000FF);
+    panElectrons1.rotation.z = Math.PI/2;
+    panElectrons1.rotation.y = -Math.PI/2;
+    panElectrons2 = panElectrons1.clone();
+    coilElectrons = panElectrons1.clone();
+    coilElectrons.rotation.z = Math.PI;
+    panElectrons1.position.set( lengthMagFluxLoops * 3, 2, 0 );
+    panElectrons2.position.set( lengthMagFluxLoops * 6, 2, 0 );
+    coilElectrons.position.set( lengthMagFluxLoops * 9, 2, 0 );
+    pivotPanElectrons.add(panElectrons1)
+    pivotPanElectrons.add(panElectrons2);
+    pivotCoilElectrons.add(coilElectrons);
+    scene.add(pivotPanElectrons);
+    scene.add(pivotCoilElectrons);
     }
 
 }
@@ -227,16 +237,18 @@ function update()
 time++;
 var angle = -clockWise * 2 * Math.PI * Math.sin(Math.PI * time/timeSteps);
 var scaleAngle = Math.PI * time/timeSteps;
-pivot.rotation.y = angle;
-pivotCoil.rotation.y = -angle;
-electrons.scale.set( 1, Math.cos(scaleAngle), 1 )
-electrons2.scale.set( 1, Math.cos(scaleAngle), 1 )
-electrons3.scale.set( 1, Math.cos(scaleAngle), 1 )
+pivotPanElectrons.rotation.y = angle;
+pivotCoilElectrons.rotation.y = -angle;
+panElectrons1.scale.set( 1, Math.cos(scaleAngle), 1 )
+panElectrons2.scale.set( 1, Math.cos(scaleAngle), 1 )
+coilElectrons.scale.set( 1, Math.cos(scaleAngle), 1 )
 for(var i = 0; i < fluxLoops.children.length; i++)
     {
-    fluxLoops.children[i].children[0].scale.set( 1, Math.cos(scaleAngle), 1 ); 
+    fluxLoops.children[i].children[0].scale.set( 1, Math.sin(scaleAngle), 1 ); 
     }
-fluxLoops.children;
+panColor = new THREE.Color(panColorCold);
+panColor.lerp(panColorWarm, Math.abs(Math.cos(scaleAngle)));
+panBottom.material.color = panColor;
 }
 
 // render, or 'draw a still image', of the scene
@@ -245,8 +257,6 @@ function render() {
 }
 
 function onWindowResize() {
-
-    console.log('You resized the browser window!');
     // set the aspect ratio to match the new browser window aspect ratio
     camera.aspect = container.clientWidth / container.clientHeight;
 

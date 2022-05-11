@@ -133,7 +133,7 @@ function createMeshes() {
     {
     const path = new CustomSpiral(spiralWraps);
     const geometry = new THREE.TubeGeometry( path, 10000, .5, 8, true );
-    const material = new THREE.MeshPhongMaterial( { color: 0xffff00 } );
+    const material = new THREE.MeshPhongMaterial( { color: 0xad490e } );
     spiral = new THREE.Mesh( geometry, material );
     scene.add( spiral );
     }

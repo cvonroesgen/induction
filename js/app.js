@@ -10,7 +10,10 @@ let arrow;
 let pivotPanElectrons;
 let pivotCoilElectrons;
 var numMagFluxLoops = 12;
-var lengthMagFluxLoops = 6;
+var lengthMagFluxLoops = 20;
+var radialDisplacementFluxLoops = 10;
+var panRadius = 80;
+var coilRadius = 100;
 var spiralWraps = 100;
 let fluxLoops = new THREE.Group();
 let panBottom;
@@ -61,7 +64,7 @@ function createCamera() {
         1000, // far clipping plane
     );
 
-    camera.position.set(-40, 40, 100);
+    camera.position.set(-80, 80, 200);
 
 
 }
@@ -87,10 +90,12 @@ function createMeshes() {
 
     class CustomSpiral extends THREE.Curve {
 
-        constructor( wraps = 1 ) {
+        constructor( wraps = 1, outerRadius = 1, holeRadius = 0 ) {
     
             super();
             this.wraps = wraps;
+            this.outerRadius = outerRadius;
+            this.holeRadius = holeRadius;
         }
     
         getPoint( t, optionalTarget = new THREE.Vector3() ) {
@@ -99,16 +104,17 @@ function createMeshes() {
             const ty = 0;
             const tz = Math.sin( 2 * Math.PI * t  * this.wraps);
     
-            return optionalTarget.set( tx, ty, tz ).multiplyScalar( t * 20 * lengthMagFluxLoops/2 );
+            return optionalTarget.set( tx, ty, tz ).multiplyScalar( this.holeRadius + (t * this.outerRadius ));
     
         }
     
     }
 
-    const ellipseTemplate = makeEllipse();
+    const ellipseTemplate = makeElongatedCircle(5, lengthMagFluxLoops);
     const ellipseArrow = makeArrow(10, 1, 0x00FF00);
     ellipseArrow.rotation.z = Math.PI/2;
     ellipseArrow.position.y = 5;
+    ellipseArrow.position.x = radialDisplacementFluxLoops + lengthMagFluxLoops;
     ellipseTemplate.add(ellipseArrow);
     for(var i = 0; i < numMagFluxLoops; i++)
     {
@@ -116,14 +122,14 @@ function createMeshes() {
     var angle = 2 * Math.PI * i/numMagFluxLoops;
     ellipse.rotation.y = (angle);
     angle +=  2 * Math.PI/4;
-    ellipse.position.x = Math.sin(angle) * lengthMagFluxLoops * 5;
-    ellipse.position.z = Math.cos(angle) * lengthMagFluxLoops * 5;
+    ellipse.position.x = Math.sin(angle) * radialDisplacementFluxLoops;
+    ellipse.position.z = Math.cos(angle) * radialDisplacementFluxLoops;
     fluxLoops.add(ellipse);    
     }
     scene.add( fluxLoops );
 
     {
-    const geometry = new THREE.CylinderGeometry( lengthMagFluxLoops * 7.5, lengthMagFluxLoops * 7.5, .05, 32 );
+    const geometry = new THREE.CylinderGeometry( panRadius, panRadius, .05, 32 );
     const material = new THREE.MeshBasicMaterial( {color: panColor} );
     panBottom = new THREE.Mesh( geometry, material );
     
@@ -131,7 +137,7 @@ function createMeshes() {
     scene.add( panBottom );
     }
     {
-    const path = new CustomSpiral(spiralWraps);
+    const path = new CustomSpiral(spiralWraps, coilRadius, 10);
     const geometry = new THREE.TubeGeometry( path, 10000, .5, 8, true );
     const material = new THREE.MeshPhongMaterial( { color: 0xad490e } );
     spiral = new THREE.Mesh( geometry, material );
@@ -154,9 +160,9 @@ function createMeshes() {
     panElectrons2 = panElectrons1.clone();
     coilElectrons = panElectrons1.clone();
     coilElectrons.rotation.z = Math.PI;
-    panElectrons1.position.set( lengthMagFluxLoops * 3, 2, 0 );
-    panElectrons2.position.set( lengthMagFluxLoops * 6, 2, 0 );
-    coilElectrons.position.set( lengthMagFluxLoops * 9, 2, 0 );
+    panElectrons1.position.set( panRadius * .3, 2, 0 );
+    panElectrons2.position.set( panRadius * .6, 2, 0 );
+    coilElectrons.position.set( coilRadius * .9, 2, 0 );
     pivotPanElectrons.add(panElectrons1)
     pivotPanElectrons.add(panElectrons2);
     pivotCoilElectrons.add(coilElectrons);
@@ -166,22 +172,24 @@ function createMeshes() {
 
 }
 
-function makeEllipse()
+function makeEllipse(scale, majorAxis)
 {
     class CustomEllipse extends THREE.Curve {
 
-        constructor( scale = 1 ) {
+        constructor( scale = 1, majorAxis = 1 ) {
     
             super();
     
             this.scale = scale;
+            this.majorAxis = majorAxis;
     
         }
     
         getPoint( t, optionalTarget = new THREE.Vector3() ) {
     
-            const tx = Math.cos( 2 * Math.PI * t ) * lengthMagFluxLoops;
-            const ty = Math.sin( 2 * Math.PI * t );
+            const angle = 2 * Math.PI * t ;
+            const tx = Math.cos( angle ) * this.majorAxis;
+            const ty = Math.sin( angle );
             const tz = 0;
     
             return optionalTarget.set( tx, ty, tz ).multiplyScalar( this.scale );
@@ -189,7 +197,43 @@ function makeEllipse()
         }
     
     }
-    const path = new CustomEllipse( 5 );
+    const path = new CustomEllipse( scale, majorAxis );
+    const geometry = new THREE.TubeGeometry( path, 100, .5, 8, true );
+    const material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
+    return new THREE.Mesh( geometry, material );
+
+}
+
+
+function makeElongatedCircle(radius, len)
+{
+    class CustomElongatedCircle extends THREE.Curve {
+
+        constructor( radius = 1, len = 1) {
+    
+            super();
+    
+            this.radius = radius;
+            this.len = len;
+    
+        }
+    
+        getPoint( t, optionalTarget = new THREE.Vector3() ) {
+            const angle = (2 * Math.PI * t);
+            let tx = -Math.sin( angle );
+            if(angle >= Math.PI)
+                {
+                tx += this.len;
+                }
+            const ty = Math.cos( angle );
+            const tz = 0;
+    
+            return optionalTarget.set( tx, ty, tz ).multiplyScalar( this.radius );
+    
+        }
+    
+    }
+    const path = new CustomElongatedCircle( radius, len );
     const geometry = new THREE.TubeGeometry( path, 100, .5, 8, true );
     const material = new THREE.MeshPhongMaterial( { color: 0x00ff00 } );
     return new THREE.Mesh( geometry, material );

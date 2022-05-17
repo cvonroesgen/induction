@@ -288,7 +288,7 @@ panElectrons2.scale.set( 1, Math.cos(scaleAngle), 1 )
 coilElectrons.scale.set( 1, Math.cos(scaleAngle), 1 )
 for(var i = 0; i < fluxLoops.children.length; i++)
     {
-    fluxLoops.children[i].children[0].scale.set( 1, Math.sin(scaleAngle), 1 ); 
+    fluxLoops.children[i].children[0].scale.set( 1, Math.cos(scaleAngle), 1 ); 
     }
 panColor = new THREE.Color(panColorCold);
 panColor.lerp(panColorWarm, Math.abs(Math.cos(scaleAngle)));
